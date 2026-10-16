@@ -58,8 +58,18 @@ class Go2TrotCfg(Go2Cfg):
         gait_joint_amplitudes = 4 * [0.0, -0.15, 0.30]
 
     class commands(Go2Cfg.commands):
-        # Standard deviation in m/s around the forward-command centers below.
+        # Change commands within an episode so the policy learns transitions.
+        resampling_time = 1.5
         var = 0.1
+
+        # Base-height commands, all in meters.
+        height_min = 0.25
+        height_max = 0.38
+        height_default = 0.32
+        height_step = 0.02
+
+        # Include plenty of stationary height-control examples.
+        stand_probability = 0.5
 
         class ranges(Go2Cfg.commands.ranges):
             lin_vel_x = [-0.5, 0.0, 0.5, 1.0, 2.0]
@@ -94,11 +104,13 @@ class Go2TrotCfg(Go2Cfg):
 
     class reward_settings(Go2Cfg.reward_settings):
         base_height_target = Go2Cfg.reward_settings.base_height_target
+        height_tracking_sigma = 0.06  # Reward tolerance, in meters.
 
     class scaling(Go2Cfg.scaling):
         # Canonical RobotLayout order is FL, FR, RL, RR, with
         # hip, thigh, calf inside each leg. Backends map native order to it.
         base_height = 0.3
+        height_commands = 0.3
         dof_pos = 4 * [1.0472, 2.53075, 0.94247]
         dof_pos_obs = dof_pos
         # Residual radians per policy unit, independent of observation ranges.
@@ -112,9 +124,12 @@ class Go2TrotRunnerCfg(Go2RunnerCfg):
         # * can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
         activation = "elu"
         obs = [
+            "base_height",
+            "base_lin_vel",
             "base_ang_vel",
             "projected_gravity",
             "commands",
+            "height_commands",
             "dof_pos_obs",
             "dof_vel",
             "dof_pos_target",
@@ -168,7 +183,8 @@ class Go2TrotRunnerCfg(Go2RunnerCfg):
                 dof_pos_limits = 0.0
                 feet_contact_forces = 0.0
                 dof_near_home = 0.0
-                min_base_height = 0.5
+                min_base_height = 0.0
+                tracking_height = 8.0
                 action_rate = 0.1
                 action_rate2 = 0.05
                 trot_support = 3.0

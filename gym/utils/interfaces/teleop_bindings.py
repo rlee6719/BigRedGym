@@ -79,8 +79,12 @@ class TeleopCommands:
         self.max_vel_yaw = 2.0
         self.increment_yaw = self.max_vel_yaw * 0.2
 
+        # Start with no commanded forward, sideways, or yaw motion.
         env.commands[:] = 0.0
-        env.commands[:, 0] = 1.0  # seed forward velocity so motion is visible
+
+        if hasattr(env, "height_commands"):
+            env._height_teleop_active = True
+            env.height_commands.fill_(env.cfg.commands.height_default)
         if hasattr(env.cfg, "commands"):
             env.cfg.commands.resampling_time = env.max_episode_length_s + 1
 
@@ -101,9 +105,35 @@ class TeleopCommands:
             c[:, 2] = torch.clamp(c[:, 2] + self.increment_yaw, max=self.max_vel_yaw)
         elif action == "yaw_right":
             c[:, 2] = torch.clamp(c[:, 2] - self.increment_yaw, min=-self.max_vel_yaw)
+        elif action in ("up", "down"):
+            if not hasattr(self.env, "height_commands"):
+                return
+
+            cfg = self.env.cfg.commands
+            change = cfg.height_step if action == "up" else -cfg.height_step
+
+            self.env.height_commands.add_(change).clamp_(
+                cfg.height_min,
+                cfg.height_max,
+            )
+
+            target = self.env.height_commands[0, 0].item()
+            actual = self.env.base_height[0, 0].item()
+            print(
+                f"Height target: {target:.3f} m | "
+                f"Actual height: {actual:.3f} m"
+            )
+
         elif action == "reset":
-            self.env.timed_out[:] = True
-            self.env.reset()
+            if hasattr(self.env, "height_commands"):
+                # The environment handles this on the next simulation step.
+                self.env._teleop_reset_requested = True
+            else:
+                # Preserve reset support for tasks without height control.
+                self.env.timed_out[:] = True
+                self.env.reset()
+                self.env.commands.zero_()
+
         else:
             raise ValueError(f"unknown teleop action {action!r}")
 

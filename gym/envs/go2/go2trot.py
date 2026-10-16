@@ -12,6 +12,17 @@ class Go2Trot(LeggedRobot):
 
     def _init_buffers(self):
         super()._init_buffers()
+        # One desired base height per environment, stored in meters.
+        self.height_commands = torch.full(
+            (self.num_envs, 1),
+            self.cfg.commands.height_default,
+            dtype=torch.float,
+            device=self.device,
+        )
+
+        # Playback-control flags; these are not policy observations.
+        self._height_teleop_active = False
+        self._teleop_reset_requested = False
 
         self._actuated_dof_pos_limits = self.dof_pos_limits.index_select(
             0, self.actuated_dof_indices
@@ -88,6 +99,10 @@ class Go2Trot(LeggedRobot):
         masked_update(self.phase_frequency, phase_frequency, reset_mask)
 
     def _resample_commands(self, command_mask):
+        # During keyboard playback, keep the user's commands.
+        if self._height_teleop_active:
+            return
+
         super()._resample_commands(command_mask)
 
         forward_commands = torch.tensor(
@@ -117,6 +132,25 @@ class Go2Trot(LeggedRobot):
                 torch.rand(self.num_envs, 1, device=self.device) >= 0.9
             )
             self.commands.masked_fill_(drop, 0.0)
+                
+        # Sample height targets only for environments selected by the mask.
+        new_heights = torch_rand_float(
+            self.cfg.commands.height_min,
+            self.cfg.commands.height_max,
+            (self.num_envs, 1),
+            device=self.device,
+        )
+        masked_update(self.height_commands, new_heights, command_mask)
+
+        # Force a fraction of samples to have zero movement commands.
+        # Their height commands remain active.
+        standing_mask = command_mask & (
+            torch.rand(self.num_envs, device=self.device)
+            < self.cfg.commands.stand_probability
+        )
+        self.commands.masked_fill_(standing_mask.unsqueeze(1), 0.0)
+
+
 
     def _reset_idx(self, reset_mask):
         super()._reset_idx(reset_mask)
@@ -231,3 +265,26 @@ class Go2Trot(LeggedRobot):
             ),
             dim=1,
         )
+
+    def _reward_tracking_height(self):
+        """Reward tracking the commanded base height."""
+        error = self.base_height - self.height_commands
+        sigma = self.cfg.reward_settings.height_tracking_sigma
+        return torch.exp(-torch.square(error / sigma)).squeeze(1)
+
+    def _pre_decimation_step(self):
+        super()._pre_decimation_step()
+
+        # Process a keyboard reset in the simulation loop,
+        # rather than resetting directly inside the viewer callback.
+        if self._teleop_reset_requested:
+            self._teleop_reset_requested = False
+            self.commands.zero_()
+            self.height_commands.fill_(self.cfg.commands.height_default)
+
+            reset_mask = torch.ones(
+                self.num_envs,
+                dtype=torch.bool,
+                device=self.device,
+            )
+            self._reset_idx(reset_mask)
