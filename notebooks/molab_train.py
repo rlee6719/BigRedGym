@@ -115,8 +115,8 @@ def _(mo):
 @app.cell
 def _():
     # --- edit, run this cell, then run the next one --------------------------
-    BRANCH = "main"
-    REPO_URL = "https://github.com/LampLighterLab/BigRedGym.git"
+    BRANCH = "assignment-4-height"
+    REPO_URL = "https://github.com/rlee6719/BigRedGym.git"
     return BRANCH, REPO_URL
 
 
@@ -190,8 +190,8 @@ def _():
     TASK = "go2trot"  # go2trot | mini_cheetah | humanoid | pendulum ...
     DEVICE = "cuda:0" # specifies which GPU to use - do not edit this line unless you know what this means!
     NUM_ENVS = 4096 # we specify multiples of 2 to compensate for the hardware.
-    MAX_ITERATIONS = 550
-    EXPERIMENT_NAME = ""  # blank -> the task's default
+    MAX_ITERATIONS = 2
+    EXPERIMENT_NAME = "go2trot_gpu_test"  # blank -> the task's default
     RESUME = False  # resume the newest run for this experiment (if you stopped a training run)
     USE_WANDB = False  # don't worry about this for now, we'll go over it later in the course.
     return (
