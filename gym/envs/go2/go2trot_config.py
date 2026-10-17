@@ -63,13 +63,13 @@ class Go2TrotCfg(Go2Cfg):
         var = 0.1
 
         # Base-height commands, all in meters.
-        height_min = 0.25
-        height_max = 0.38
-        height_default = 0.32
+        height_min = 0.3
+        height_max = 0.4
+        height_default = 0.35
         height_step = 0.02
 
         # Include plenty of stationary height-control examples.
-        stand_probability = 0.5
+        stand_probability = 0.8
 
         class ranges(Go2Cfg.commands.ranges):
             lin_vel_x = [-0.5, 0.0, 0.5, 1.0, 2.0]
@@ -162,6 +162,7 @@ class Go2TrotRunnerCfg(Go2RunnerCfg):
             "base_ang_vel",
             "projected_gravity",
             "commands",
+            "height_commands",
             "dof_pos_obs",
             "dof_vel",
             "dof_pos_target",
@@ -184,12 +185,12 @@ class Go2TrotRunnerCfg(Go2RunnerCfg):
                 feet_contact_forces = 0.0
                 dof_near_home = 0.0
                 min_base_height = 0.0
-                tracking_height = 8.0
+                tracking_height = 6.0
                 action_rate = 0.1
                 action_rate2 = 0.05
                 trot_support = 3.0
                 swing_contact = 3.0
-                reference_traj = 3.0
+                reference_traj = 1.0
 
             class termination_weight:
                 termination = 0.01

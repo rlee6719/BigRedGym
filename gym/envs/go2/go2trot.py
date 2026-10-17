@@ -267,10 +267,12 @@ class Go2Trot(LeggedRobot):
         )
 
     def _reward_tracking_height(self):
-        """Reward tracking the commanded base height."""
-        error = self.base_height - self.height_commands
-        sigma = self.cfg.reward_settings.height_tracking_sigma
-        return torch.exp(-torch.square(error / sigma)).squeeze(1)
+        """Penalize commanded-height tracking error."""
+        error = torch.abs(
+            self.base_height - self.height_commands
+        ).squeeze(1)
+
+        return -error / 0.10
 
     def _pre_decimation_step(self):
         super()._pre_decimation_step()

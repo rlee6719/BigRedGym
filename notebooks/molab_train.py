@@ -191,7 +191,7 @@ def _():
     DEVICE = "cuda:0" # specifies which GPU to use - do not edit this line unless you know what this means!
     NUM_ENVS = 4096 # we specify multiples of 2 to compensate for the hardware.
     MAX_ITERATIONS = 550
-    EXPERIMENT_NAME = "go2trot_height_v1"  # blank -> the task's default
+    EXPERIMENT_NAME = "go2trot_height_v2"  # blank -> the task's default
     RESUME = False  # resume the newest run for this experiment (if you stopped a training run)
     USE_WANDB = False  # don't worry about this for now, we'll go over it later in the course.
     return (
