@@ -66,7 +66,7 @@ class Go2TrotCfg(Go2Cfg):
         height_min = 0.3
         height_max = 0.4
         height_default = 0.35
-        height_step = 0.02
+        height_step = 0.005
 
         # Include plenty of stationary height-control examples.
         stand_probability = 0.8

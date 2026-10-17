@@ -14,6 +14,10 @@ import random
 
 import torch
 
+import math
+
+import matplotlib.pyplot as plt
+
 from gym.utils.helpers import set_seed
 from gym.utils.task_registry import task_registry
 
@@ -91,6 +95,8 @@ def setup(args):
     env_cfg.env.episode_length_s = 50
     if hasattr(env_cfg, "commands"):
         env_cfg.commands.resampling_time = 9999
+    if hasattr(env_cfg.commands, "height_step"):
+        env_cfg.commands.height_step = 0.005
     if hasattr(env_cfg, "push_robots"):
         env_cfg.push_robots.toggle = False
     env_cfg.init_state.reset_mode = "reset_to_basic"
@@ -132,14 +138,58 @@ def setup(args):
 
 def play(env, runner):
     n_steps = 10 * int(env.max_episode_length)
-    for _ in range(n_steps):
-        runner.set_actions(
-            runner.actor_cfg["actions"],
-            runner.get_inference_actions(),
-            runner.actor_cfg["disable_actions"],
-        )
-        env.step()
-        env.check_exit()
+
+    times = []
+    target_heights = []
+    actual_heights = []
+
+    try:
+        for step in range(n_steps):
+            runner.set_actions(
+                runner.actor_cfg["actions"],
+                runner.get_inference_actions(),
+                runner.actor_cfg["disable_actions"],
+            )
+
+            env.step()
+
+            if hasattr(env, "height_commands"):
+                times.append(step * env.dt)
+                target_heights.append(env.height_commands[0, 0].item())
+                actual_heights.append(env.base_height[0, 0].item())
+
+            env.check_exit()
+
+    finally:
+        if target_heights:
+            errors = [
+                actual - target
+                for actual, target in zip(actual_heights, target_heights)
+            ]
+            rmse = math.sqrt(
+                sum(error**2 for error in errors) / len(errors)
+            )
+
+            plt.figure(figsize=(9, 5))
+            plt.plot(times, target_heights, label="Commanded height")
+            plt.plot(times, actual_heights, label="Actual height")
+
+            plt.xlabel("Time (s)")
+            plt.ylabel("Base height (m)")
+            plt.title(
+                f"Go2 Base Height Tracking"
+            )
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+
+            plt.savefig("height_tracking.pdf")
+            plt.savefig("height_tracking.png", dpi=200)
+
+            print("\nHeight tracking plot saved:")
+            print("  height_tracking.pdf")
+            print("  height_tracking.png")
+            print(f"  RMSE: {rmse:.3f} m")
 
 
 if __name__ == "__main__":
